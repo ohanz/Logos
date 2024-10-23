@@ -1,0 +1,7 @@
+body{
+    font-family: Arial, sans-serif;
+  text-align: center;
+    /* justify-content: center; */
+}
+p{font-weight: bold;}
+input:focus{border: 2px solid rgb(64, 214, 64)}

@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/Auth');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 
@@ -19,6 +19,7 @@ app.use(session({
   store
 }));
 
+app.use(express.static('views'));
 app.use('/auth', authRoutes);
 
 app.get('/success', (req, res) => {
