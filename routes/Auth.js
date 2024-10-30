@@ -183,6 +183,7 @@ router.post('/logout', async (req, res) => {
 // });
 
 // Updated: 
+// generative Token redundant for server project
 
 router.post('/signup', async (req, res) => {
   try {

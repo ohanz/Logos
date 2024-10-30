@@ -4,8 +4,8 @@
   <title>Logos | Login</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-  <h3>{{message}}</h3>
+<body onload="myFun()">
+  <h3 id="message-body">{{message}}</h3>
   <h1>Login</h1>
   <form action="/auth/login" method="post">
     <label>Email:</label>
@@ -15,5 +15,15 @@
     <input type="submit" value="Login">
   </form><br /><br >
   <p> Don't Have an Account? </p><a href="/signup"><button type="button">Sign Up Now</button></a>
+
+  <script>
+    let tId =  document.getElementById("message-body");
+    function myFun() {
+      if(tId.innerText == "{{message}}"){
+        tId.innerHTML = "Welcome, Hyper!"
+      }else console.log('err, not equal.')
+  alert("Page is loaded");
+}
+  </script>
 </body>
 </html>

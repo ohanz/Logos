@@ -5,6 +5,7 @@ const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 require('dotenv').config(); // npm install dotenv
 
+const { connectToMongo } = require('./config/database');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -54,22 +55,50 @@ const authenticate = (req, res, next) => {
 //   }
 // });
 const path = require('path');
+const User = require('./models/User');
 
-app.get('/success', authenticate, (req, res) => {
-  console.log('Session in /success:', req.session);
-  if (!req.session.userId) {
-    console.log('Session expired or invalid');
-    return res.redirect('/login');
+const { ObjectId } = require('mongodb');
+app.get('/success', authenticate, async (req, res) => {
+  try {
+    console.log('Session in /success:', req.session);
+
+    if (!req.session || !req.session.userId) {
+      console.log('Session expired or invalid');
+      return res.redirect('/login');
+    }
+
+    console.log('User ID:', req.session.userId);
+    const db = await connectToMongo();
+    const users = db.collection('hypers');
+const userCount = await users.countDocuments();
+console.log('User Count:', userCount);
+
+    const userId = req.session.userId;
+    // const user = await User.findById(userId).select('username email');
+    const user = await db.collection('hypers').findOne(
+      { _id: new ObjectId(userId) },
+      {
+        projection: {
+          username: 1,
+          email: 1,
+          _id: 0,
+        },
+      }
+    );
+    const message = req.session.message || 'Welcome back!';
+    delete req.session.message;
+
+    const html = fs.readFileSync(__dirname + '/views/success.htm', 'utf8');
+    const replacedHtml = html
+      .replace('{{message}}', message)
+      .replace('{{username}}', user.username)
+      .replace('{{email}}', user.email);
+
+    res.send(replacedHtml);
+  } catch (err) {
+    console.error('Error fetching user:', err.message, err.stack);
+    res.status(500).json({ message: 'Error fetching user', error: err.message });
   }
-
-  const message = req.session.message;
-  delete req.session.message;
-
-  // res.sendFile(path.join(__dirname, 'views', 'success.htm'));
-  //updated:
-  const html = fs.readFileSync(__dirname + '/views/success.htm', 'utf8');
-  const replacedHtml = html.replace('{{message}}', message);
-  res.send(replacedHtml);
 });
 
 app.get('/login', (req, res) => {
