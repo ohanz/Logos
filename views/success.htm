@@ -4,6 +4,14 @@
   <title>Success</title>
 </head>
 <body>
-  <h1>Logged in successfully</h1>
+  <!-- <h1>Logged in successfully</h1> -->
+  <h1>{{message}}</h1>
+
+  <br/><br/> 
+  <p>Don't Have An Account? </p><a href="/signup"><button type="button">Register Now</button></a>
+  <br/>
+  <form action="/auth/logout" method="post">
+    <button type="submit">Log-Out</button>
+  </form>
 </body>
 </html>

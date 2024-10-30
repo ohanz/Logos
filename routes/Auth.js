@@ -50,30 +50,139 @@ router.post('/login', async (req, res) => {
       createdAt: new Date(),
     });
 
-      res.json({ message: 'Logged in successfully', sessionToken });
+      // res.json({ message: 'Logged in successfully', sessionToken });
+      req.session.message = 'Logged in successfully';
+      console.log('Login successful');
+      res.redirect('/success');
+
     } catch (err) {
       console.error('Error logging in:', err.message, err.stack);
       res.status(500).json({ message: 'Error logging in', error: { message: err.message, stack: err.stack } });
     }
   });
+
+  const authenticate = (req, res, next) => {
+    if (!req.token || req.token.expired) {
+      return res.redirect('/');
+    }
+    next();
+  };
+  // to USE:
+  // Define routes that require authentication
+// app.use('/protected', authenticate, (req, res) => {
+//   // Token is valid, proceed with route handler
+//   res.send('Hello, authenticated user!');
+// });
+
   
   // Logout route
+// router.post('/logout', async (req, res) => {
+//   try {
+//     const sessionToken = req.headers['x-session-token'];
+
+//     const db = await connectToMongo();
+//     const sessions = db.collection('sessions');
+
+//     // Remove session document
+//     await sessions.deleteOne({ sessionToken });
+
+//     // res.json({ message: 'Logged out successfully' });
+//     req.session.message = 'Logged out successfully';
+//     res.redirect('/login');
+//   } catch (err) {
+//     console.error('Error logging out:', err.message, err.stack);
+//     res.status(500).json({ message: 'Error logging out', error: { message: err.message, stack: err.stack } });
+//   }
+// });
+// router.post('/logout', async (req, res) => {
+//   try {
+//     const sessionToken = req.headers['x-session-token'];
+//     const db = await connectToMongo();
+//     const sessions = db.collection('sessions');
+
+//     // Remove session document
+//     await sessions.deleteOne({ sessionToken });
+
+//     // Set success message
+//     req.session.message = 'Logged out successfully';
+
+//     // Redirect to login page
+//     res.redirect('/login');
+//   } catch (err) {
+//     console.error('Error logging out:', err.message, err.stack);
+//     res.status(500).json({
+//       message: 'Error logging out',
+//       error: {
+//         message: err.message,
+//         stack: err.stack
+//       }
+//     });
+//   } finally {
+//     // Optional: Destroy session to ensure cleanup
+//     req.session.destroy((err) => {
+//       if (err) console.error('Error destroying session:', err);
+//     });
+//   }
+// });
+
+//Updated:
+// 1. Removed x-session-token header check (not necessary with server-side sessions)
+// 2. Removed MongoDB sessions collection interaction (not needed with server-side sessions)
+// 3. Simplified error handling
+
+
 router.post('/logout', async (req, res) => {
   try {
-    const sessionToken = req.headers['x-session-token'];
-
-    const db = await connectToMongo();
-    const sessions = db.collection('sessions');
-
-    // Remove session document
-    await sessions.deleteOne({ sessionToken });
-
-    res.json({ message: 'Logged out successfully' });
+    await new Promise((resolve, reject) => {
+      req.session.destroy((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    res.redirect('/login?message=Logged+out+successfully');
   } catch (err) {
     console.error('Error logging out:', err.message, err.stack);
-    res.status(500).json({ message: 'Error logging out', error: { message: err.message, stack: err.stack } });
+    res.status(500).json({ message: 'Error logging out' });
   }
 });
+
+
+// router.post('/signup', async (req, res) => {
+//   try {
+//     const { username, email, password } = req.body;
+
+//     // Validation
+//     if (!username || !email || !password) {
+//       res.status(400).json({ message: 'Invalid request' });
+//       return;
+//     }
+
+//     const user = new User(username, email, password);
+//     const db = await connectToMongo();
+//     const users = db.collection('hypers');
+
+//     // Check existing email
+//     const existingUser = await users.findOne({ email });
+//     if (existingUser) {
+//       res.status(400).json({ message: 'Email already exists' });
+//       return;
+//     }
+
+//     const result = await users.insertOne(user);
+//     console.log('User created:', result.insertedId);
+//     req.session.userId = result.insertedId;
+//     const sessionToken = generateSessionToken(userId);
+//   // res.json({ message: 'Signup successful', sessionToken, userId });
+//   req.session.message = 'Signup successful';
+//   res.redirect('/success');
+//     // res.json({ message: 'Signed up successfully' });
+//   } catch (err) {
+//     console.error('Error creating user:', err.message, err.stack);
+//     res.status(500).json({ message: 'Error creating user', error: { message: err.message, stack: err.stack } });
+//   }
+// });
+
+// Updated: 
 
 router.post('/signup', async (req, res) => {
   try {
@@ -99,12 +208,14 @@ router.post('/signup', async (req, res) => {
     const result = await users.insertOne(user);
     console.log('User created:', result.insertedId);
     req.session.userId = result.insertedId;
-    const sessionToken = generateSessionToken(userId);
-  res.json({ message: 'Signup successful', sessionToken, userId });
-    // res.json({ message: 'Signed up successfully' });
+    req.session.message = 'Signup successful';
+    res.redirect('/success');
   } catch (err) {
     console.error('Error creating user:', err.message, err.stack);
-    res.status(500).json({ message: 'Error creating user', error: { message: err.message, stack: err.stack } });
+    res.status(500).json({ 
+      message: 'Error creating user', 
+      error: { message: err.message, stack: err.stack } 
+    });
   }
 });
 

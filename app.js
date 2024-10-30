@@ -3,7 +3,7 @@ const app = express();
 const authRoutes = require('./routes/Auth');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
-require('dotenv').config();
+require('dotenv').config(); // npm install dotenv
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -23,17 +23,67 @@ app.use(session({
 app.use(express.static('views'));
 app.use('/auth', authRoutes);
 
-app.get('/success', (req, res) => {
-  if (req.session.userId) {
-    res.send('Logged in successfully');
-  } else {
-    res.redirect('/login');
+const fs = require('fs');
+
+// const authenticate = (req, res, next) => {
+//   if (!req.token || req.token.expired) {
+//     return res.redirect('/');
+//   }
+//   next();
+// };
+// const authenticate = (req, res, next) => {
+//   const sessionToken = req.headers['x-session-token'];
+//   if (!sessionToken || sessionToken.expired) {
+//     return res.redirect('/login');
+//   }
+//   next();
+// };
+const authenticate = (req, res, next) => {
+  if (!req.session || !req.session.userId) {
+    return res.redirect('/login');
   }
+  next();
+};
+
+// app.get('/success', authenticate, (req, res) => {
+//   if (req.session.userId) {
+//     res.sendFile(__dirname + '/views/success.htm');
+//     // res.send('Logged in successfully');
+//   } else {
+//     res.redirect('/login');
+//   }
+// });
+const path = require('path');
+
+app.get('/success', authenticate, (req, res) => {
+  console.log('Session in /success:', req.session);
+  if (!req.session.userId) {
+    console.log('Session expired or invalid');
+    return res.redirect('/login');
+  }
+
+  const message = req.session.message;
+  delete req.session.message;
+
+  // res.sendFile(path.join(__dirname, 'views', 'success.htm'));
+  //updated:
+  const html = fs.readFileSync(__dirname + '/views/success.htm', 'utf8');
+  const replacedHtml = html.replace('{{message}}', message);
+  res.send(replacedHtml);
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(__dirname + '/views/login.htm');
+  let message = req.session.message || req.query.message;
+  if (message) {
+    delete req.session.message;
+    const html = fs.readFileSync(__dirname + '/views/login.htm', 'utf8');
+    const replacedHtml = html.replace('{{message}}', message);
+    res.send(replacedHtml);
+  } else {
+    res.sendFile(__dirname + '/views/login.htm');
+  }
 });
+
 
 app.get('/signup', (req, res) => {
   res.sendFile(__dirname + '/views/signup.htm');
