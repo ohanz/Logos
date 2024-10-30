@@ -3,6 +3,7 @@ const app = express();
 const authRoutes = require('./routes/Auth');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
+require('dotenv').config();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
