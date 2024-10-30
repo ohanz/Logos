@@ -209,7 +209,7 @@ router.post('/signup', async (req, res) => {
     const result = await users.insertOne(user);
     console.log('User created:', result.insertedId);
     req.session.userId = result.insertedId;
-    req.session.message = 'Signup successful';
+    req.session.message = 'Signup successful!';
     res.redirect('/success');
   } catch (err) {
     console.error('Error creating user:', err.message, err.stack);
@@ -227,71 +227,152 @@ function generateResetToken() {
 
 router.post('/forgot-password', async (req, res) => {
   try {
+    const db = await connectToMongo();
+    const usersCollection = db.collection('hypers');
+
     const { email } = req.body;
-    const user = await User.findOne({ email });
+    const user = await usersCollection.findOne({ email });
+    
+
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const resetToken = generateResetToken(); // implement generateResetToken function
-    user.passwordResetToken = resetToken;
-    user.passwordResetExpires = Date.now() + 3600000; // 1 hour
-    await user.save();
+    const resetToken = generateResetToken();
+    
+    await usersCollection.updateOne({ email }, {
+      $set: {
+        passwordResetToken: resetToken,
+        passwordResetExpires: Date.now() + 3600000,
+      },
+    });
 
-    // Send password reset email
-    sendPasswordResetEmail(user.email, resetToken);
+
+    const resetUrl = 'http://localhost:3000/reset-password'; // Define reset URL
+
+    await sendPasswordResetEmail(user.email, resetToken, resetUrl);
 
     res.json({ message: 'Password reset email sent' });
   } catch (err) {
-    console.error(err);
+    console.error('Error Details:', err);
     res.status(500).json({ message: 'Error generating password reset token' });
   }
 });
 
 const nodemailer = require('nodemailer');
 
-async function sendPasswordResetEmail(email, resetToken) {
+async function sendPasswordResetEmail(email, resetToken, resetUrl) {
   const transporter = nodemailer.createTransport({
-    // mail service configuration
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
   });
 
   const mailOptions = {
-    from: 'your-email@example.com',
+    from: 'hypercoderd@gmail.com',
     to: email,
     subject: 'Password Reset',
     text: `Reset your password: ${resetUrl}/${resetToken}`,
   };
 
-  await transporter.sendMail(mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Password reset email sent');
+  } catch (err) {
+    console.error('Error sending email:', err);
+    throw err;
+  }
 }
 
-router.post('/reset-password/:token', async (req, res) => {
+router.post('/reset-password', async (req, res) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
-
+    const { token, newPassword } = req.body;
+    
+    // Verify token and update password
     const user = await User.findOne({ passwordResetToken: token });
+    
     if (!user) {
       return res.status(404).json({ message: 'Invalid token' });
     }
-
-    // Validate token expiration
-    if (user.passwordResetExpires < Date.now()) {
-      return res.status(400).json({ message: 'Token expired' });
-    }
-
-    // Update user password
-    user.password = password;
+    
+    user.password = await bcrypt.hash(newPassword, 10);
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
+    
     await user.save();
-
+    
     res.json({ message: 'Password reset successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error resetting password' });
   }
 });
+
+router.get('/reset-password/:token', async (req, res) => {
+  try {
+    const token = req.params.token;
+    const user = await User.findOne({ passwordResetToken: token });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid token' });
+    }
+
+    // res.render('reset-password', { token }); // Render password reset form
+    res.redirect(`/reset-password.htm?token=${token}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error resetting password' });
+  }
+});
+
+
+
+router.post('/update-password', async (req, res) => {
+  try {
+    console.log('Request body:', req.body);
+    const { token, newPassword, confirmPassword } = req.body;
+
+    if (!token || token === '') {
+      console.log('Token is empty');
+      return res.status(400).json({ message: 'Token is required' });
+    }
+    
+    const db = await connectToMongo();
+    const usersCollection = db.collection('hypers');
+    
+    // const user = await usersCollection.findOne({ passwordResetToken: token });
+    console.log('Searching for user with token:', token);
+    const filter = { passwordResetToken: token };
+    console.log('Filter:', filter);
+    const user = await usersCollection.findOne(filter);
+    
+    
+    if (!user) {
+      console.log('User not found with token:', token);
+      return res.status(404).json({ message: 'Invalid token' });
+    }
+    
+    console.log('User found:', user);
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updateResult = await usersCollection.updateOne(
+      { _id: user._id },
+      { $set: { password: hashedPassword, passwordResetToken: null, passwordResetExpires: null } }
+    );
+    
+    console.log('Password updated successfully');
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Error updating password:', error);
+    res.status(500).json({ message: 'Error updating password' });
+  }
+});
+
+
 
   
 module.exports = router;

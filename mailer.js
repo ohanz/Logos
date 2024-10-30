@@ -5,7 +5,7 @@ const transporter = nodemailer.createTransport({
   port:  465,
   secure: true, // or 'STARTTLS'
   auth: {
-    user: 'email-from@gmail.com',
+    user: 'hyper@gmail.com',
     pass: 'app generated password',
   },
 });

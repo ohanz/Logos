@@ -118,6 +118,16 @@ app.get('/signup', (req, res) => {
   res.sendFile(__dirname + '/views/signup.htm');
 });
 
+app.get('/forgot-password', (req, res) => {
+  // res.render('forgot-password.htm'); // Assuming you have a forgot-password template
+  res.sendFile(path.join(__dirname, '/views/forgot-password.htm'));
+});
+
+app.get('/reset-password/:token', (req, res) => {
+  const token = req.params.token;
+  res.sendFile(path.join(__dirname, '/views/reset-password.htm'));
+});
+
 app.listen(3000, () => {
   console.log('Ohanz Server listening on port 3000');
 })
