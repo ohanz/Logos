@@ -220,5 +220,78 @@ router.post('/signup', async (req, res) => {
   }
 });
 
+const crypto = require('crypto');
+function generateResetToken() {
+  return crypto.randomBytes(20).toString('hex');
+}
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const resetToken = generateResetToken(); // implement generateResetToken function
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    // Send password reset email
+    sendPasswordResetEmail(user.email, resetToken);
+
+    res.json({ message: 'Password reset email sent' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error generating password reset token' });
+  }
+});
+
+const nodemailer = require('nodemailer');
+
+async function sendPasswordResetEmail(email, resetToken) {
+  const transporter = nodemailer.createTransport({
+    // mail service configuration
+  });
+
+  const mailOptions = {
+    from: 'your-email@example.com',
+    to: email,
+    subject: 'Password Reset',
+    text: `Reset your password: ${resetUrl}/${resetToken}`,
+  };
+
+  await transporter.sendMail(mailOptions);
+}
+
+router.post('/reset-password/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({ passwordResetToken: token });
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid token' });
+    }
+
+    // Validate token expiration
+    if (user.passwordResetExpires < Date.now()) {
+      return res.status(400).json({ message: 'Token expired' });
+    }
+
+    // Update user password
+    user.password = password;
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error resetting password' });
+  }
+});
+
   
 module.exports = router;

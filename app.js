@@ -5,7 +5,7 @@ const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 require('dotenv').config(); // npm install dotenv
 
-const { connectToMongo } = require('./config/database');
+const { connectToMongo } = require('./config/database'); // adjusting the dots(.) helped debug
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
