@@ -12,10 +12,55 @@
     <label>Email:</label>
     <input type="email" name="email"><br><br>
     <label>Password:</label>
-    <input type="password" name="password"><br><br>
+    <input type="password" name="password">
+    <label>Confirm Password:</label>
+    <input type="password" name="confirmPassword"><br><br>
     <input type="submit" value="Signup">
+    <br>
+    <div id="message"></div>
   </form>
 <br />
   <p>Have an Account? </p><a href="/login"><button type="button">Login Here!</button></a>
+
+  <script>
+    const passwordInput = document.querySelector('input[name="password"]');
+const confirmPasswordInput = document.querySelector('input[name="confirmPassword"]');
+const form = document.querySelector('form');
+const messageElement = document.getElementById('message');
+
+form.addEventListener('submit', (e) => {
+  const password = passwordInput.value;
+  const confirmPassword = confirmPasswordInput.value;
+  const passwordErrors = [];
+
+  // Validate password length
+  if (password.length < 8) {
+    passwordErrors.push("Password must be at least 8 characters long");
+  }
+
+  // Validate password complexity
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
+  if (!passwordRegex.test(password)) {
+    passwordErrors.push("Password must contain:");
+    passwordErrors.push("- At least one uppercase letter");
+    passwordErrors.push("- At least one lowercase letter");
+    passwordErrors.push("- At least one digit");
+    passwordErrors.push("- At least one special character");
+  }
+
+  // Validate password match
+  if (password !== confirmPassword) {
+    passwordErrors.push("Passwords do not match");
+  }
+
+  // Display error messages
+  if (passwordErrors.length > 0) {
+    e.preventDefault(); // Prevent form submission
+    const errorMessage = passwordErrors.join("<br>");
+    messageElement.innerHTML = `<h3>Oopsie, error occurred</h3>:<br><i>${errorMessage}</i>`;
+    return;
+  }
+});
+  </script>
 </body>
 </html>

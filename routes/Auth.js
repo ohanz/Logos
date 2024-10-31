@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs'); // Import bcryptjs
 const jwt = require('jsonwebtoken'); // Install: npm install jsonwebtoken
 // Session expiration time (1 hour)
 const SESSION_EXPIRATION = 3600000; // ms
+const nodemailer = require('nodemailer');
 
 router.post('/login', async (req, res) => {
     try {
@@ -184,6 +185,42 @@ router.post('/logout', async (req, res) => {
 
 // Updated: 
 // generative Token redundant for server project
+// Update: Email success
+async function sendWelcomeEmail(email, username) {
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  const mailOptions = {
+    from: 'hypercoderd@gmail.com',
+    to: email,
+    subject: 'Welcome to Logos!',
+    text: `Hello ${username}, welcome to Logos! We're excited to have you onboard.`,
+    html: `<h1>Welcome to Logos!</h1><p>Hello ${username}, welcome to Logos! We're excited to have you onboard.</p>`,
+    headers: {
+      'X-Mailer': 'Nodemailer',
+      'X-Priority': '3',
+      'X-Authenticated-User': 'hypercoderd@gmail.com',
+      'X-Mailer-Info': 'Ihype COM',
+      'X-Feedback-Id': 'your-feedback-id',
+      'X-Spam-Flag': 'NO',
+    },
+  };
+  console.log('Mail options:', mailOptions);
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Welcome email sent');
+  } catch (err) {
+    console.error('Error sending welcome email:', err);
+    throw err;
+  }
+}
 
 router.post('/signup', async (req, res) => {
   try {
@@ -194,7 +231,17 @@ router.post('/signup', async (req, res) => {
       res.status(400).json({ message: 'Invalid request' });
       return;
     }
+ // Password validation
+ if (password.length < 8) {
+  res.status(400).json({ message: 'Password must be at least 8 characters long' });
+  return;
+}
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/;
+if (!passwordRegex.test(password)) {
+  res.status(400).json({ message: 'Password must contain: uppercase, lowercase, digits, and special characters' });
+  return;
+}
     const user = new User(username, email, password);
     const db = await connectToMongo();
     const users = db.collection('hypers');
@@ -210,6 +257,9 @@ router.post('/signup', async (req, res) => {
     console.log('User created:', result.insertedId);
     req.session.userId = result.insertedId;
     req.session.message = 'Signup successful!';
+
+    await sendWelcomeEmail(user.email, user.username);
+
     res.redirect('/success');
   } catch (err) {
     console.error('Error creating user:', err.message, err.stack);
@@ -259,7 +309,6 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-const nodemailer = require('nodemailer');
 
 async function sendPasswordResetEmail(email, resetToken, resetUrl) {
   const transporter = nodemailer.createTransport({
